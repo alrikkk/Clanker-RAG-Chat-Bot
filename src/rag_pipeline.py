@@ -8,19 +8,15 @@ from src.generator import AnswerGenerator
 from src.intent_router import (
     is_explicit_nimbus_inquiry,
     is_follow_up_with_context,
-    is_ambiguous_without_context,
-    is_live_data_query,
     contextualize_query_with_history
 )
 
 
 class RAGPipeline:
     """
-    Intelligent Dual-Path RAG & General AI Conversational Pipeline:
-    1. NimbusNote / Document RAG Mode: contextual retrieval -> cosine similarity -> grounded generation + citations.
-    2. General AI & Conversational Mode: programming, math, science, poetry, banter, chit-chat -> natural AI responses.
-    3. Unsupported NimbusNote Requests: clear refusal when asked for doc facts not present in corpus.
-    4. Ambiguous / Live Data Queries: intelligent clarification or live-data disclaimers.
+    Intelligent Clanker Brain Architecture:
+    The LLM is Clanker's brain and ALWAYS generates the final response.
+    RAG is an authoritative knowledge source consulted when NimbusNote information is needed.
     """
     def __init__(
         self,
@@ -44,7 +40,7 @@ class RAGPipeline:
         if not self.docs_dir.exists():
             raise FileNotFoundError(f"Documentation directory not found at {self.docs_dir}")
 
-        # Check for precomputed static embedding cache for ultra-fast startup
+        # Check for precomputed static embedding cache for instant startup
         cache_file = self.docs_dir / "embedded_chunks.json"
         if cache_file.exists():
             try:
@@ -61,34 +57,35 @@ class RAGPipeline:
                         vectors.append(item["embedding"])
                     self.vector_store.add_chunks(self.chunks, np.array(vectors, dtype=np.float32))
                     self.indexed = True
-                    print(f"[RAGPipeline] Loaded {len(self.chunks)} precomputed embedded chunks from cache.")
+                    print(f"[clanker] Loaded {len(self.chunks)} precomputed embedded chunks from cache.")
                     return
             except Exception as err:
-                print(f"[RAGPipeline] Note: Could not load cache ({err}), re-embedding...")
+                print(f"[clanker] Note: Could not load cache ({err}), re-embedding...")
 
-        print(f"[RAGPipeline] Loading documents from {self.docs_dir}...")
+        print(f"[clanker] Loading documents from {self.docs_dir}...")
         self.chunks = load_and_chunk_documents(self.docs_dir)
 
         if not self.chunks:
-            print("[RAGPipeline] Warning: No document chunks were loaded.")
+            print("[clanker] Warning: No document chunks were loaded.")
             self.indexed = True
             return
 
         texts = [chunk["text"] for chunk in self.chunks]
-        print(f"[RAGPipeline] Generating local embeddings for {len(texts)} chunks...")
+        print(f"[clanker] Generating local embeddings for {len(texts)} chunks...")
         chunk_embeddings = self.embedding_model.encode(texts, normalize=True)
 
         self.vector_store.add_chunks(self.chunks, chunk_embeddings)
         self.indexed = True
-        print(f"[RAGPipeline] Successfully indexed {len(self.chunks)} chunks in memory.")
+        print(f"[clanker] Successfully indexed {len(self.chunks)} chunks in memory.")
 
     def query(self, question: str, history: Optional[List[Dict[str, str]]] = None) -> Dict[str, Any]:
         """
-        Executes intelligent intent routing and RAG query processing:
-        - Ambiguous query without context -> clarification response
-        - Live real-time data inquiry -> live data disclaimer
-        - NimbusNote knowledge inquiry -> vector retrieval -> threshold check -> grounded answer + citations
-        - General AI / Casual / Creative / Tech concept inquiry -> general conversational AI answer
+        Processes user query through Clanker:
+        1. Contextualize query with recent conversation history.
+        2. Determine if NimbusNote knowledge is relevant.
+        3. If relevant, retrieve chunks and pass to LLM as authoritative context.
+        4. If not, pass question directly to LLM.
+        5. LLM always produces the final response.
         """
         if not self.indexed:
             self.initialize()
@@ -98,7 +95,7 @@ class RAGPipeline:
             return {
                 "question": question,
                 "answer": "Please write a question or message in the notebook.",
-                "mode": "casual",
+                "mode": "general",
                 "supported": True,
                 "top_similarity": 0.0,
                 "threshold": self.threshold,
@@ -106,69 +103,60 @@ class RAGPipeline:
                 "retrieved_count": 0
             }
 
-        # 1. Check for ambiguous query without context
-        if is_ambiguous_without_context(cleaned_question, history=history):
-            answer = self.generator.generate_general_response(cleaned_question, history=history)
-            return {
-                "question": question,
-                "answer": answer,
-                "mode": "casual",
-                "supported": True,
-                "top_similarity": 0.0,
-                "threshold": self.threshold,
-                "citations": [],
-                "retrieved_count": 0
-            }
+        print(f"[clanker] Received message: '{cleaned_question}'")
 
-        # 2. Check for real-time live data queries (e.g. weather in Chennai)
-        if is_live_data_query(cleaned_question):
-            answer = self.generator.generate_general_response(cleaned_question, history=history)
-            return {
-                "question": question,
-                "answer": answer,
-                "mode": "casual",
-                "supported": True,
-                "top_similarity": 0.0,
-                "threshold": self.threshold,
-                "citations": [],
-                "retrieved_count": 0
-            }
-
-        # 3. Check for specific unsupported NimbusNote feature inquiries
-        UNSUPPORTED_NIMBUS_FEATURES = {
-            "voice", "audio", "video", "recording", "record", "mic", "microphone", "call",
-            "screen share", "latex", "pdf export", "kanban", "calendar", "reminder",
-            "phone support", "ocr", "drawing tool"
-        }
-        q_lower = cleaned_question.lower()
-        if "nimbus" in q_lower or "nimbusnote" in q_lower or "notebook" in q_lower:
-            if any(f in q_lower for f in UNSUPPORTED_NIMBUS_FEATURES):
-                return {
-                    "question": question,
-                    "answer": "I couldn't find that in the NimbusNote documentation. The notebook covers workspace creation, Free/Pro/Team plans, sync intervals, and troubleshooting.",
-                    "mode": "unsupported",
-                    "supported": False,
-                    "top_similarity": 0.25,
-                    "threshold": self.threshold,
-                    "citations": [],
-                    "retrieved_count": 0
-                }
-
-        # 4. Perform semantic vector search on contextualized query
+        # Check for explicit NimbusNote keywords or follow-up in context
         is_nimbus_inquiry = is_explicit_nimbus_inquiry(cleaned_question)
         is_follow_up = is_follow_up_with_context(cleaned_question, history=history)
-        
+
+        # Contextualize query for semantic vector search
         search_query = contextualize_query_with_history(cleaned_question, history=history)
         query_vec = self.embedding_model.encode_query(search_query)
         candidates = self.vector_store.search(query_vec, top_k=self.top_k)
         top_similarity = candidates[0].get("similarity", 0.0) if candidates else 0.0
 
-        # 5. Routing Decision:
-        # If it's explicitly about NimbusNote or a contextual follow-up, OR similarity >= 0.40
-        if (is_nimbus_inquiry or is_follow_up) and top_similarity >= self.threshold:
-            # High-confidence RAG Match
+        # Check for explicit unsupported NimbusNote feature inquiries
+        UNSUPPORTED_NIMBUS_FEATURES = {
+            "voice", "audio", "video", "recording", "record", "mic", "microphone", "call",
+            "screen share", "latex", "pdf export", "kanban", "calendar", "reminder",
+            "phone support", "ocr", "drawing tool", "quantum", "bluetooth"
+        }
+        q_lower = cleaned_question.lower()
+        if ("nimbus" in q_lower or "nimbusnote" in q_lower or "notebook" in q_lower) and any(f in q_lower for f in UNSUPPORTED_NIMBUS_FEATURES):
+            print(f"[clanker] Response mode: Unsupported NimbusNote query (unsupported feature)")
+            llm_answer = self.generator.generate_response(
+                cleaned_question,
+                retrieved_chunks=None,
+                history=history,
+                unsupported_note=True
+            )
+            return {
+                "question": question,
+                "answer": llm_answer,
+                "mode": "unsupported",
+                "supported": False,
+                "top_similarity": 0.25,
+                "threshold": self.threshold,
+                "citations": [],
+                "retrieved_count": 0
+            }
+
+        # RAG Decision:
+        # If it's explicitly about NimbusNote or a follow-up, OR has strong semantic match >= 0.50
+        requires_nimbus_rag = (is_nimbus_inquiry or is_follow_up) and (top_similarity >= self.threshold)
+        is_strong_semantic_rag = (top_similarity >= 0.50)
+
+        if requires_nimbus_rag or is_strong_semantic_rag:
+            # 1. RAG KNOWLEDGE MODE — Consult the notebook and pass to LLM
             relevant_chunks = [c for c in candidates if c.get("similarity", 0.0) >= self.threshold]
-            answer = self.generator.generate_grounded_answer(relevant_chunks, cleaned_question, history=history)
+            print(f"[clanker] Response mode: RAG (retrieved {len(relevant_chunks)} chunks, top_sim={top_similarity:.3f})")
+
+            llm_answer = self.generator.generate_response(
+                cleaned_question,
+                retrieved_chunks=relevant_chunks,
+                history=history
+            )
+
             citations = [{
                 "source": c.get("source", "unknown"),
                 "doc_title": c.get("doc_title", "NimbusNote Docs"),
@@ -180,7 +168,7 @@ class RAGPipeline:
 
             return {
                 "question": question,
-                "answer": answer,
+                "answer": llm_answer,
                 "mode": "rag",
                 "supported": True,
                 "top_similarity": top_similarity,
@@ -190,10 +178,19 @@ class RAGPipeline:
             }
 
         elif is_nimbus_inquiry and top_similarity < self.threshold:
-            # User specifically asked for a NimbusNote feature that is not in the docs
+            # 2. UNSUPPORTED NIMBUSNOTE QUERY — LLM explains documentation does not contain feature
+            print(f"[clanker] Response mode: Unsupported NimbusNote query (top_sim={top_similarity:.3f} < {self.threshold})")
+
+            llm_answer = self.generator.generate_response(
+                cleaned_question,
+                retrieved_chunks=None,
+                history=history,
+                unsupported_note=True
+            )
+
             return {
                 "question": question,
-                "answer": "I couldn't find that in the NimbusNote documentation. The notebook covers workspace creation, Free/Pro/Team plans, sync intervals, and troubleshooting.",
+                "answer": llm_answer,
                 "mode": "unsupported",
                 "supported": False,
                 "top_similarity": top_similarity,
@@ -202,37 +199,21 @@ class RAGPipeline:
                 "retrieved_count": 0
             }
 
-        elif top_similarity >= 0.45:
-            # Paraphrased query with strong semantic match against document chunks
-            relevant_chunks = [c for c in candidates if c.get("similarity", 0.0) >= self.threshold]
-            answer = self.generator.generate_grounded_answer(relevant_chunks, cleaned_question, history=history)
-            citations = [{
-                "source": c.get("source", "unknown"),
-                "doc_title": c.get("doc_title", "NimbusNote Docs"),
-                "section": c.get("section", "Overview"),
-                "similarity": c.get("similarity", 0.0),
-                "chunk_index": c.get("chunk_index", 0),
-                "passage": c.get("text", "")
-            } for c in relevant_chunks]
-
-            return {
-                "question": question,
-                "answer": answer,
-                "mode": "rag",
-                "supported": True,
-                "top_similarity": top_similarity,
-                "threshold": self.threshold,
-                "citations": citations,
-                "retrieved_count": len(citations)
-            }
-
         else:
-            # 5. General AI & Conversational Mode (programming, math, science, jokes, small talk, random text)
-            answer = self.generator.generate_general_response(cleaned_question, history=history)
+            # 3. GENERAL AI CONVERSATION MODE — Normal LLM generation with no document card
+            print(f"[clanker] Response mode: General AI (top_sim={top_similarity:.3f})")
+
+            llm_answer = self.generator.generate_response(
+                cleaned_question,
+                retrieved_chunks=None,
+                history=history,
+                unsupported_note=False
+            )
+
             return {
                 "question": question,
-                "answer": answer,
-                "mode": "casual",
+                "answer": llm_answer,
+                "mode": "general",
                 "supported": True,
                 "top_similarity": top_similarity,
                 "threshold": self.threshold,
