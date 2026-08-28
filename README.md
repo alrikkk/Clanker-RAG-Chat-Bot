@@ -1,10 +1,10 @@
 # Clanker
 
-A small RAG chatbot built around the NimbusNote documentation.
+A notebook-powered AI assistant and RAG chatbot built around the NimbusNote documentation.
 
 ## What it does
 
-Clanker answers questions using a small set of NimbusNote documents. For document-related questions it retrieves relevant passages first, then gives the model that context to work from. The retrieved document, section, similarity score, and exact passage are shown with each grounded answer. For casual conversation (like greetings or jokes), it chats naturally without running unnecessary document lookups.
+Clanker is a conversational AI assistant living inside a digital notebook. The message box is general-purpose: you can ask general programming and technical questions, solve math, request poems or jokes, or chat naturally. When you ask a question related to NimbusNote, Clanker retrieves the most relevant passages from its local documentation corpus first, verifies similarity against a relevance threshold, and provides a grounded answer with exact citations (source file, section heading, similarity score, and passage quote).
 
 ## Reference Documents
 
@@ -14,12 +14,12 @@ The documentation files in `data/` (`01-getting-started.md`, `02-pricing-and-pla
 
 1. **Load documents**: Reads the Markdown files from `data/`.
 2. **Chunking**: Splits files deterministically around Markdown headings (`#`, `##`) and paragraphs into structured chunks with metadata (`source`, `section`, `chunk_index`, `text`).
-3. **Embeddings**: Generates 384-dimensional dense vectors locally using `sentence-transformers` (`all-MiniLM-L6-v2`).
-4. **Vector search**: Stores chunks and embeddings in an in-memory vector store. When a query arrives, it computes cosine similarity:
+3. **Embeddings**: Generates 384-dimensional dense vectors using `fastembed` (`sentence-transformers/all-MiniLM-L6-v2` ONNX runtime).
+4. **Intent & Vector search**: Evaluates whether a question is general AI/casual or a NimbusNote knowledge inquiry. For document inquiries, it computes cosine similarity against indexed chunks:
    $$\text{similarity} = \frac{u \cdot v}{\|u\|_2 \|v\|_2}$$
-5. **Relevance threshold**: Queries must meet a similarity threshold of `0.40` to be considered answerable from the docs. Questions below threshold are rejected without hallucinating facts.
-6. **Answer generation**: Passes only the top retrieved passages to the generator. If `OPENAI_API_KEY` is provided, it calls OpenAI; otherwise it runs fully offline using its built-in extractor.
-7. **Source citation**: Displays the source document filename, section heading, similarity score, and quoted passage.
+5. **Relevance threshold**: Document queries must meet a similarity threshold of `0.40` to be considered answerable from the docs. Specific doc features not in the corpus are rejected without hallucinating facts.
+6. **Answer generation**: Passes retrieved passages to the generator. If `OPENAI_API_KEY` is provided, it calls OpenAI; otherwise it runs fully offline using its built-in local engine.
+7. **Source citation**: Displays the source document filename, section heading, similarity score, and quoted passage when RAG is used.
 
 ## Running locally
 
@@ -69,10 +69,11 @@ pytest -v
 The test suite covers:
 - Markdown chunking and heading hierarchy preservation
 - In-memory vector store cosine similarity math
-- In-scope retrieval (e.g. sync intervals, pricing tiers, image limits)
+- In-scope retrieval (sync intervals, pricing tiers, image limits)
 - Casual conversation routing (greetings, jokes, small talk)
+- General AI explanations (recursion, math, science, poetry)
 - Multi-turn conversational follow-up retrieval
-- Out-of-scope question rejection and refusal behavior
+- Unsupported NimbusNote question rejection
 - FastAPI endpoints (`/api/health`, `/api/documents`, `/api/query`)
 
 ## Project structure
@@ -88,16 +89,17 @@ The test suite covers:
 │   ├── app.py                  # FastAPI web application
 │   ├── chunker.py              # Deterministic Markdown chunker
 │   ├── config.py               # Configuration & threshold settings
-│   ├── embeddings.py           # Local embedding model wrapper
+│   ├── embeddings.py           # ONNX embedding model wrapper
 │   ├── generator.py            # Answer generator (OpenAI + local fallback)
-│   ├── intent_router.py        # Casual vs RAG intent router & history resolver
-│   ├── rag_pipeline.py         # End-to-end RAG coordinator
+│   ├── intent_router.py        # Intent router & conversation history resolver
+│   ├── rag_pipeline.py         # End-to-end RAG & conversation coordinator
 │   └── vector_store.py         # In-memory cosine similarity vector store
 ├── static/                     # Web frontend
 │   ├── index.html              # HTML with "Let's Chat" page & notebook chat
 │   ├── css/style.css           # Skeuomorphic notebook styles
 │   ├── js/app.js               # Frontend controller & citation renderer
 │   └── assets/                 # Clanker robot mascot artwork
+├── public/                     # Static assets served by Edge CDN
 ├── tests/                      # Automated pytest suite
 │   ├── test_api.py
 │   ├── test_chunker.py
@@ -105,8 +107,6 @@ The test suite covers:
 │   └── test_vector_store.py
 ├── api/                        # Vercel serverless entrypoint
 │   └── index.py
-├── scripts/                    # Helper scripts
-│   └── build_vector_cache.py
 ├── vercel.json                 # Vercel deployment routing
 ├── requirements.txt            # Python dependencies
 ├── .env.example                # Example environment variables
@@ -122,18 +122,3 @@ The test suite covers:
 4. Deploy.
 
 Vercel will use `vercel.json` and `api/index.py` to serve the FastAPI backend along with the static frontend files.
-
-## Example Queries
-
-### In-scope question
-- **Question**: *"How often does NimbusNote sync while the app is in the foreground?"*
-- **Source**: `01-getting-started.md`
-- **Section**: `Sync behavior`
-- **Similarity**: `~0.77`
-- **Answer**: *"NimbusNote syncs every 15 seconds while the app is in the foreground, and every 5 minutes in the background."*
-
-### Out-of-scope question
-- **Question**: *"What is the weather in Chennai today?"*
-- **Similarity**: `< 0.15` (Below `0.40` threshold)
-- **Answer**: *"I couldn't find enough information to answer that from the provided documents."*
-- **Citations**: None displayed.
