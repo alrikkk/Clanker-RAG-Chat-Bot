@@ -44,8 +44,10 @@ class MessageItem(BaseModel):
 
 
 class QueryRequest(BaseModel):
-    question: str = Field(..., min_length=1, description="The user's question or message.")
+    question: Optional[str] = Field(default=None, description="The user's question.")
+    message: Optional[str] = Field(default=None, description="Alternative alias for question.")
     history: Optional[List[MessageItem]] = Field(default_factory=list, description="Prior conversation turns.")
+    conversation_history: Optional[List[MessageItem]] = Field(default_factory=list, description="Alternative alias for history.")
 
 
 class CitationItem(BaseModel):
@@ -59,12 +61,15 @@ class CitationItem(BaseModel):
 
 class QueryResponse(BaseModel):
     question: str
+    message: Optional[str] = None
     answer: str
-    mode: str = "rag"  # "rag" | "casual" | "unsupported"
+    response: Optional[str] = None
+    mode: str = "rag"  # "rag" | "general" | "unsupported"
     supported: bool
     top_similarity: float
     threshold: float
     citations: List[CitationItem]
+    sources: Optional[List[CitationItem]] = None
     retrieved_count: int
 
 
@@ -72,14 +77,22 @@ class QueryResponse(BaseModel):
 @app.post("/query", response_model=QueryResponse)
 async def query_endpoint(request: QueryRequest):
     """
-    Submits a query to Clanker, intelligently routing between Casual Conversation
-    and RAG Knowledge Mode with grounded generation and source citations.
+    Submits a query to Clanker, intelligently routing between General AI
+    and RAG Knowledge Mode with Groq LLM generation and source citations.
     """
+    user_input = (request.question or request.message or "").strip()
+    if not user_input:
+        raise HTTPException(status_code=400, detail="Missing question or message in request body.")
+
     try:
-        raw_history = [{"role": m.role, "content": m.content} for m in (request.history or [])]
-        result = pipeline.query(request.question, history=raw_history)
+        raw_history = [{"role": m.role, "content": m.content} for m in (request.history or request.conversation_history or [])]
+        result = pipeline.query(user_input, history=raw_history)
+        result["message"] = user_input
+        result["response"] = result["answer"]
+        result["sources"] = result["citations"]
         return result
     except Exception as e:
+        print(f"[clanker] Query processing exception: {type(e).__name__}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Query processing failed: {str(e)}")
 
 
