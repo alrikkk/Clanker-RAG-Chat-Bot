@@ -237,7 +237,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     article.innerHTML = `
       <div class="speaker-tag">
-        <img src="/assets/clanker-mascot.svg" alt="" class="speaker-avatar-img" width="16" height="16" aria-hidden="true">
+        <img src="/assets/clanker-avatar.png" alt="" class="speaker-avatar-img" width="18" height="18" aria-hidden="true">
         <span>CLANKER</span>
       </div>
 
