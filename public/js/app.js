@@ -1,10 +1,10 @@
 /**
  * CLANKER — Intelligent Skeuomorphic Notebook AI Assistant
- * Dual-Path Routing (RAG Knowledge Mode vs Casual Conversation Mode)
+ * Dual-Path Routing (RAG Knowledge Mode vs General AI / Conversational Mode)
  */
 
 document.addEventListener('DOMContentLoaded', () => {
-  // Elements
+  // DOM Elements
   const landingView = document.getElementById('landing-view');
   const chatView = document.getElementById('chat-view');
   const btnEnterChat = document.getElementById('btn-enter-chat');
@@ -15,8 +15,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const questionInput = document.getElementById('question-input');
   const btnSubmit = document.getElementById('btn-submit-question');
   const loadingIndicator = document.getElementById('loading-indicator');
-  const loadingMainText = loadingIndicator.querySelector('.loading-main');
-  const loadingSubText = loadingIndicator.querySelector('.loading-sub');
+  const loadingMainText = loadingIndicator ? loadingIndicator.querySelector('.loading-main') : null;
+  const loadingSubText = loadingIndicator ? loadingIndicator.querySelector('.loading-sub') : null;
   const docStatusIndicator = document.getElementById('doc-status-indicator');
 
   // In-Memory Multi-Turn Conversation History
@@ -26,35 +26,41 @@ document.addEventListener('DOMContentLoaded', () => {
   fetchDocumentStatus();
 
   // Navigation: Enter Notebook Chat
-  btnEnterChat.addEventListener('click', () => {
-    landingView.classList.add('hidden');
-    chatView.classList.remove('hidden');
-    questionInput.focus();
-  });
+  if (btnEnterChat && landingView && chatView) {
+    btnEnterChat.addEventListener('click', () => {
+      landingView.classList.add('hidden');
+      chatView.classList.remove('hidden');
+      if (questionInput) questionInput.focus();
+    });
+  }
 
   // Navigation: Return to Cover
-  btnBackCover.addEventListener('click', () => {
-    chatView.classList.add('hidden');
-    landingView.classList.remove('hidden');
-  });
+  if (btnBackCover && landingView && chatView) {
+    btnBackCover.addEventListener('click', () => {
+      chatView.classList.add('hidden');
+      landingView.classList.remove('hidden');
+    });
+  }
 
   // Clear Chat History
-  btnClearChat.addEventListener('click', () => {
-    const welcome = document.getElementById('welcome-message');
-    chatMessages.innerHTML = '';
-    conversationHistory = [];
-    if (welcome) {
-      chatMessages.appendChild(welcome);
-    }
-    questionInput.focus();
-  });
+  if (btnClearChat && chatMessages) {
+    btnClearChat.addEventListener('click', () => {
+      const welcome = document.getElementById('welcome-message');
+      chatMessages.innerHTML = '';
+      conversationHistory = [];
+      if (welcome) {
+        chatMessages.appendChild(welcome);
+      }
+      if (questionInput) questionInput.focus();
+    });
+  }
 
   // Quick Prompt Chips
   document.addEventListener('click', (e) => {
     const chip = e.target.closest('.prompt-chip');
     if (chip) {
       const promptText = chip.getAttribute('data-prompt');
-      if (promptText) {
+      if (promptText && questionInput) {
         questionInput.value = promptText;
         submitQuery(promptText);
       }
@@ -62,20 +68,25 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Keyboard Submission in Textarea (Enter to submit, Shift+Enter for newline)
-  questionInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      chatForm.requestSubmit();
-    }
-  });
+  if (questionInput && chatForm) {
+    questionInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        chatForm.requestSubmit();
+      }
+    });
+  }
 
   // Form Submit Handler
-  chatForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const queryText = questionInput.value.trim();
-    if (!queryText) return;
-    submitQuery(queryText);
-  });
+  if (chatForm) {
+    chatForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      if (!questionInput) return;
+      const queryText = questionInput.value.trim();
+      if (!queryText) return;
+      submitQuery(queryText);
+    });
+  }
 
   async function fetchDocumentStatus() {
     try {
@@ -84,29 +95,30 @@ document.addEventListener('DOMContentLoaded', () => {
         const data = await res.json();
         const docCount = data.documents ? data.documents.length : 3;
         const chunkCount = data.total_chunks || 0;
-        docStatusIndicator.textContent = `Indexed: ${docCount} NimbusNote Documents (${chunkCount} Chunks)`;
+        if (docStatusIndicator) {
+          docStatusIndicator.textContent = `Indexed: ${docCount} NimbusNote Documents (${chunkCount} Chunks)`;
+        }
       }
     } catch (err) {
-      console.warn('Could not fetch document status:', err);
+      console.warn('[Clanker] Could not fetch document status:', err);
     }
   }
 
   async function submitQuery(question) {
-    // Clear input & disable button
-    questionInput.value = '';
-    btnSubmit.disabled = true;
+    // Clear input & disable submit button to prevent double sends
+    if (questionInput) questionInput.value = '';
+    if (btnSubmit) btnSubmit.disabled = true;
 
     // Append User Message to Notebook
     appendUserMessage(question);
 
-    // Contextual Loading State
-    const isCasual = /^(yo|hey|hi|hello|sup|thanks|lol|tell me a joke|who are you|how are you)/i.test(question.trim());
-    if (isCasual) {
-      loadingMainText.textContent = 'Clanker is thinking...';
-      loadingSubText.textContent = 'Writing a conversational note';
-    } else {
-      loadingMainText.textContent = 'Clanker is checking the notebook...';
-      loadingSubText.textContent = 'Searching indexed passages & calculating similarity';
+    // Update loading text safely
+    const isCasual = /^(yo|hey|hi|hello|sup|thanks|lol|tell me a joke|who are you|how are you|explain|what is)/i.test(question.trim());
+    if (loadingMainText) {
+      loadingMainText.textContent = isCasual ? 'Clanker is thinking...' : 'Clanker is checking the notebook...';
+    }
+    if (loadingSubText) {
+      loadingSubText.textContent = isCasual ? 'Writing a conversational response' : 'Searching indexed passages & calculating similarity';
     }
 
     showLoading(true);
@@ -116,39 +128,56 @@ document.addEventListener('DOMContentLoaded', () => {
     const historyPayload = conversationHistory.slice(-6);
 
     try {
+      console.log('[Clanker] Sending request to /api/query:', { question, history: historyPayload });
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+
       const response = await fetch('/api/query', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           question: question,
           history: historyPayload
-        })
+        }),
+        signal: controller.signal
       });
 
+      clearTimeout(timeoutId);
+
+      console.log('[Clanker] Received response status:', response.status);
+
       if (!response.ok) {
-        throw new Error(`Server returned status ${response.status}`);
+        throw new Error(`Server returned HTTP ${response.status}`);
       }
 
       const data = await response.json();
+      console.log('[Clanker] Query response data:', data);
+
       showLoading(false);
 
       // Append assistant turn to history
       conversationHistory.push({ role: 'user', content: question });
-      conversationHistory.push({ role: 'assistant', content: data.answer });
+      conversationHistory.push({ role: 'assistant', content: data.answer || '' });
 
       appendAssistantResponse(data);
     } catch (error) {
-      console.error('Query processing error:', error);
+      console.error('[Clanker] Query error:', error);
       showLoading(false);
-      appendErrorMessage('An error occurred while writing in the notebook. Please try again.');
+      const isAbort = error.name === 'AbortError';
+      const msg = isAbort 
+        ? "Clanker took a bit too long to respond. Please check your connection and try again."
+        : "Clanker couldn't answer right now. Please try again.";
+      appendErrorMessage(msg);
     } finally {
-      btnSubmit.disabled = false;
-      questionInput.focus();
+      if (btnSubmit) btnSubmit.disabled = false;
+      if (questionInput) questionInput.focus();
       scrollToBottom();
     }
   }
 
   function appendUserMessage(text) {
+    if (!chatMessages) return;
     const article = document.createElement('article');
     article.className = 'chat-message user-message';
     article.innerHTML = `
@@ -167,6 +196,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function appendAssistantResponse(data) {
+    if (!chatMessages) return;
     const { mode, answer, citations, top_similarity, threshold } = data;
     const article = document.createElement('article');
     article.className = 'chat-message assistant-message';
@@ -233,7 +263,7 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
       `;
     }
-    // PATH 3: CASUAL CONVERSATION MODE (No retrieval cards or error boxes)
+    // PATH 3: CASUAL / GENERAL AI CONVERSATION MODE (No retrieval cards or error boxes)
 
     article.innerHTML = `
       <div class="speaker-tag">
@@ -257,15 +287,23 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function appendErrorMessage(errorText) {
+    if (!chatMessages) return;
     const article = document.createElement('article');
     article.className = 'chat-message assistant-message';
     article.innerHTML = `
       <div class="speaker-tag">
-        <img src="/assets/clanker-mascot.svg" alt="" class="speaker-avatar-img" width="16" height="16" aria-hidden="true">
+        <img src="/assets/clanker-avatar.png" alt="" class="speaker-avatar-img" width="18" height="18" aria-hidden="true">
         <span>CLANKER</span>
       </div>
       <div class="calm-unsupported-box">
-        <div class="calm-unsupported-header">Notebook Notice</div>
+        <div class="calm-unsupported-header">
+          <svg class="speaker-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+          </svg>
+          <span>Notebook Notice</span>
+        </div>
         <p class="calm-unsupported-desc">${escapeHtml(errorText)}</p>
       </div>
     `;
@@ -273,6 +311,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function showLoading(show) {
+    if (!loadingIndicator) return;
     if (show) {
       loadingIndicator.classList.remove('hidden');
     } else {
@@ -281,6 +320,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function scrollToBottom() {
+    if (!chatMessages) return;
     setTimeout(() => {
       chatMessages.scrollTop = chatMessages.scrollHeight;
     }, 50);
@@ -288,7 +328,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function escapeHtml(text) {
     if (!text) return '';
-    return text
+    return String(text)
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
