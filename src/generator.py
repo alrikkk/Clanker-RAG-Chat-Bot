@@ -3,7 +3,7 @@ import urllib.request
 import urllib.error
 import json
 from typing import List, Dict, Any, Optional
-from src.config import OPENAI_API_KEY, OPENAI_BASE_URL, OPENAI_MODEL
+from src.config import GROQ_API_KEY, GROQ_MODEL, GROQ_API_URL
 
 # Authoritative Clanker System Prompt
 CLANKER_SYSTEM_PROMPT = """You are Clanker, a conversational AI assistant living inside a digital notebook.
@@ -36,35 +36,34 @@ def format_context_block(retrieved_chunks: List[Dict[str, Any]]) -> str:
     return "\n\n---\n\n".join(blocks)
 
 
-def call_llm_api(messages: List[Dict[str, str]]) -> str:
+def call_groq_api(messages: List[Dict[str, str]]) -> str:
     """
-    Executes actual LLM completion call via OpenAI-compatible Chat Completions API.
+    Executes actual LLM completion call via Groq Chat Completions API.
     Raises RuntimeError on failure or missing API key.
     """
-    if not OPENAI_API_KEY:
+    if not GROQ_API_KEY:
         raise RuntimeError(
-            "OPENAI_API_KEY is not configured in the environment. "
-            "Please set your OpenAI API key in .env to enable Clanker's AI brain."
+            "GROQ_API_KEY is not configured in the environment. "
+            "Please set GROQ_API_KEY in .env or Vercel Environment Variables to enable Clanker's AI brain."
         )
 
-    api_url = OPENAI_BASE_URL or "https://api.openai.com/v1/chat/completions"
     headers = {
         "Content-Type": "application/json",
-        "Authorization": f"Bearer {OPENAI_API_KEY}"
+        "Authorization": f"Bearer {GROQ_API_KEY}"
     }
 
     payload = {
-        "model": OPENAI_MODEL,
+        "model": GROQ_MODEL,
         "messages": messages,
         "temperature": 0.7,
-        "max_tokens": 600
+        "max_tokens": 800
     }
 
-    print(f"[clanker] Calling LLM API ({OPENAI_MODEL}) with {len(messages)} messages...")
+    print(f"[clanker] provider: groq | model: {GROQ_MODEL} | calling LLM with {len(messages)} messages...")
 
     try:
         req = urllib.request.Request(
-            api_url,
+            GROQ_API_URL,
             data=json.dumps(payload).encode("utf-8"),
             headers=headers,
             method="POST"
@@ -72,26 +71,26 @@ def call_llm_api(messages: List[Dict[str, str]]) -> str:
         with urllib.request.urlopen(req, timeout=30) as response:
             res_data = json.loads(response.read().decode("utf-8"))
             content = res_data["choices"][0]["message"]["content"].strip()
-            print(f"[clanker] LLM response received ({len(content)} chars)")
+            print(f"[clanker] provider: groq | response received ({len(content)} chars)")
             return content
     except urllib.error.HTTPError as http_err:
         err_body = http_err.read().decode("utf-8", errors="ignore")
-        print(f"[clanker] LLM API HTTP Error {http_err.code}: {err_body}")
-        raise RuntimeError(f"LLM API returned HTTP {http_err.code}: {err_body}")
+        print(f"[clanker] provider: groq | HTTP Error {http_err.code}: {err_body}")
+        raise RuntimeError(f"Groq API returned HTTP {http_err.code}: {err_body}")
     except urllib.error.URLError as url_err:
-        print(f"[clanker] LLM API Connection Error: {url_err.reason}")
-        raise RuntimeError(f"Could not connect to LLM API: {url_err.reason}")
+        print(f"[clanker] provider: groq | Connection Error: {url_err.reason}")
+        raise RuntimeError(f"Could not connect to Groq API: {url_err.reason}")
     except Exception as e:
-        print(f"[clanker] LLM API Unexpected Error: {str(e)}")
-        raise RuntimeError(f"LLM generation failed: {str(e)}")
+        print(f"[clanker] provider: groq | Unexpected Error: {str(e)}")
+        raise RuntimeError(f"Groq generation failed: {str(e)}")
 
 
 class AnswerGenerator:
     """
-    Unified LLM Answer Generator.
-    Clanker's AI Brain is the LLM.
+    Unified Groq Answer Generator.
+    Clanker's AI Brain is Groq.
     When RAG context is supplied, it grounds the answer in retrieved NimbusNote docs.
-    When no RAG context is needed, the LLM answers naturally.
+    When no RAG context is needed, Groq answers general requests directly.
     """
     def generate_response(
         self,
@@ -133,5 +132,5 @@ class AnswerGenerator:
 
         messages.append({"role": "user", "content": user_content})
 
-        # The LLM is ALWAYS the final generator
-        return call_llm_api(messages)
+        # Groq is ALWAYS the final generator
+        return call_groq_api(messages)

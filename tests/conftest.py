@@ -3,9 +3,9 @@ import os
 from unittest.mock import patch
 
 
-def mock_call_llm_api(messages):
+def mock_call_groq_api(messages):
     """
-    Mock LLM generator for unit test suite when no live OPENAI_API_KEY is configured.
+    Mock Groq generator for unit test suite when no live GROQ_API_KEY is configured.
     Echoes dynamic, contextual responses based on prompt messages.
     """
     system_msg = messages[0]["content"] if messages else ""
@@ -48,7 +48,7 @@ def mock_call_llm_api(messages):
 
 
 @pytest.fixture(autouse=True)
-def mock_llm_if_no_key(monkeypatch):
-    """Auto-mocks LLM API call for tests if OPENAI_API_KEY is not set."""
-    if not os.getenv("OPENAI_API_KEY"):
-        monkeypatch.setattr("src.generator.call_llm_api", mock_call_llm_api)
+def mock_groq_if_no_key(monkeypatch):
+    """Auto-mocks Groq API call for tests if GROQ_API_KEY is not set."""
+    if not os.getenv("GROQ_API_KEY"):
+        monkeypatch.setattr("src.generator.call_groq_api", mock_call_groq_api)

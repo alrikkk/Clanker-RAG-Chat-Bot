@@ -18,7 +18,7 @@ The documentation files in `data/` (`01-getting-started.md`, `02-pricing-and-pla
 4. **Intent & Vector search**: Evaluates whether a question is general AI/casual or a NimbusNote knowledge inquiry. For document inquiries, it computes cosine similarity against indexed chunks:
    $$\text{similarity} = \frac{u \cdot v}{\|u\|_2 \|v\|_2}$$
 5. **Relevance threshold**: Document queries must meet a similarity threshold of `0.40` to be considered answerable from the docs. Specific doc features not in the corpus are rejected without hallucinating facts.
-6. **Answer generation**: Passes retrieved passages to the generator. If `OPENAI_API_KEY` is provided, it calls OpenAI; otherwise it runs fully offline using its built-in local engine.
+6. **Answer generation**: Passes retrieved passages to the generator. If `GROQ_API_KEY` is provided, it calls Groq (`llama-3.3-70b-versatile`); for normal general questions, Groq answers directly with full conversation history.
 7. **Source citation**: Displays the source document filename, section heading, similarity score, and quoted passage when RAG is used.
 
 ## Running locally
@@ -33,12 +33,11 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 2. Configure environment (optional)
-Clanker runs locally and offline out-of-the-box. To use an OpenAI model:
+### 2. Configure environment
 ```bash
 cp .env.example .env
 ```
-Edit `.env` and set `OPENAI_API_KEY`.
+Edit `.env` and set `GROQ_API_KEY`.
 
 ### 3. Start the app
 ```bash
@@ -56,8 +55,8 @@ Open `http://127.0.0.1:8000` in your browser.
 | `TOP_K` | `3` | Number of passages to retrieve |
 | `HOST` | `127.0.0.1` | Local server bind host |
 | `PORT` | `8000` | Local server bind port |
-| `OPENAI_API_KEY` | *(empty)* | Optional OpenAI API key for generation |
-| `OPENAI_MODEL` | `gpt-4o-mini` | Model name when OpenAI API is used |
+| `GROQ_API_KEY` | *(empty)* | Groq API key for generation |
+| `GROQ_MODEL` | `llama-3.3-70b-versatile` | Groq model name |
 
 ## Tests
 
