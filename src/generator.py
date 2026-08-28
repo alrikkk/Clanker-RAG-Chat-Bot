@@ -49,7 +49,8 @@ def call_groq_api(messages: List[Dict[str, str]]) -> str:
 
     headers = {
         "Content-Type": "application/json",
-        "Authorization": f"Bearer {GROQ_API_KEY}"
+        "Authorization": f"Bearer {GROQ_API_KEY}",
+        "User-Agent": "Clanker/1.0 (Mozilla/5.0; Macintosh; Intel Mac OS X 10_15_7)"
     }
 
     payload = {

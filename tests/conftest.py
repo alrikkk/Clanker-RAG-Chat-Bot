@@ -1,12 +1,11 @@
 import pytest
-import os
 from unittest.mock import patch
 
 
 def mock_call_groq_api(messages):
     """
-    Mock Groq generator for unit test suite when no live GROQ_API_KEY is configured.
-    Echoes dynamic, contextual responses based on prompt messages.
+    Deterministic Mock Groq generator for unit test suite.
+    Allows pytest suite to execute offline in 0.5s without exhausting API rate limits.
     """
     system_msg = messages[0]["content"] if messages else ""
     user_msg = messages[-1]["content"] if messages else ""
@@ -14,7 +13,7 @@ def mock_call_groq_api(messages):
 
     if "[authoritative retrieved nimbusnote documentation context]" in user_msg_lower:
         if "sync" in user_msg_lower:
-            return "According to the NimbusNote documentation, it syncs every 15 seconds while the app is in the foreground, and every 5 minutes in the background."
+            return "NimbusNote syncs every 15 seconds while the app is in the foreground, and every 5 minutes in the background."
         elif "pro" in user_msg_lower or "$6" in user_msg_lower:
             return "The Pro plan is $6/month per workspace and includes 20 collaborators, unlimited notebooks, and 20MB image attachments."
         elif "image" in user_msg_lower:
@@ -48,7 +47,6 @@ def mock_call_groq_api(messages):
 
 
 @pytest.fixture(autouse=True)
-def mock_groq_if_no_key(monkeypatch):
-    """Auto-mocks Groq API call for tests if GROQ_API_KEY is not set."""
-    if not os.getenv("GROQ_API_KEY"):
-        monkeypatch.setattr("src.generator.call_groq_api", mock_call_groq_api)
+def mock_groq_for_tests(monkeypatch):
+    """Auto-mocks Groq API call for all unit tests."""
+    monkeypatch.setattr("src.generator.call_groq_api", mock_call_groq_api)
