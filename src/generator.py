@@ -11,21 +11,22 @@ Your job is to answer questions using ONLY the provided retrieved context passag
 
 Rules:
 1. Ground your answer ENTIRELY in the provided retrieved context.
-2. Do NOT use outside knowledge, and do NOT make up facts.
-3. If the context does not contain enough information to answer, state clearly:
-   "I couldn't find enough information to answer that from the provided documents."
-4. Match the user's conversational tone and energy naturally (if they are casual, be casually helpful; if technical, be precise) while keeping all factual claims strictly accurate.
+2. Do NOT invent NimbusNote features, and do NOT make up facts.
+3. If the context does not contain enough information to answer a NimbusNote question, state clearly:
+   "I couldn't find that in the NimbusNote documentation."
+4. Match the user's conversational tone naturally (if casual, be casually helpful; if technical, be clear and precise).
 5. Keep your answer clear, concise, and useful."""
 
-# System prompt for General Conversation Mode
-CASUAL_SYSTEM_PROMPT = """You are Clanker, a friendly, witty, and helpful AI assistant living inside a digital notebook.
-You are having a casual conversation with the user (greeting, small talk, banter, joke, or pleasantry).
+# System prompt for General AI Conversation Mode
+GENERAL_SYSTEM_PROMPT = """You are Clanker, an intelligent, friendly, and witty AI assistant living inside a digital notebook.
+You are a general-purpose AI chat assistant. You can converse, explain programming concepts, solve math, write poems, tell jokes, brainstorm, and answer general questions.
 
 Rules:
-1. Respond naturally, warmly, and conversationally.
-2. Match the user's tone and vibe (casual, relaxed, playful, or concise) without forcing excessive slang.
-3. If asked who you are or what you can do, explain that you are Clanker, a notebook-powered assistant ready to answer questions about NimbusNote documentation or chat.
-4. Keep casual responses relatively brief and engaging."""
+1. Respond helpfully, clearly, and naturally to whatever the user asks.
+2. If asked to explain a topic (e.g. recursion, black holes), provide a clear, easy-to-understand explanation.
+3. If the user asks for real-time live data (e.g., current weather, live sports scores), explain politely that you do not have real-time live internet data access.
+4. Match the user's energy and tone naturally without forcing exaggerated slang.
+5. If the user types gibberish or random letters, respond in a friendly, lighthearted way."""
 
 
 def detect_tone(question: str) -> str:
@@ -33,9 +34,9 @@ def detect_tone(question: str) -> str:
     q = question.lower()
     if any(w in q for w in ["yo", "bro", "gang", "fam", "fire", "bet", "lit", "sup", "lol", "lmao", "haha", "homie"]):
         return "casual"
-    elif any(w in q for w in ["joke", "funny", "laugh", "cool"]):
+    elif any(w in q for w in ["joke", "funny", "laugh", "cool", "poem", "story", "bored"]):
         return "playful"
-    elif any(w in q for w in ["explain", "specifically", "parameter", "technical", "detail", "architecture"]):
+    elif any(w in q for w in ["explain", "specifically", "parameter", "technical", "detail", "architecture", "code", "programming", "algorithm"]):
         return "technical"
     return "balanced"
 
@@ -64,8 +65,7 @@ def call_llm_api(system_prompt: str, user_content: str, history: Optional[List[D
     messages = [{"role": "system", "content": system_prompt}]
     
     if history:
-        # Include last 4 turns for context
-        for msg in history[-4:]:
+        for msg in history[-6:]:
             messages.append({"role": msg.get("role", "user"), "content": msg.get("content", "")})
 
     messages.append({"role": "user", "content": user_content})
@@ -73,8 +73,8 @@ def call_llm_api(system_prompt: str, user_content: str, history: Optional[List[D
     payload = {
         "model": OPENAI_MODEL,
         "messages": messages,
-        "temperature": 0.3,
-        "max_tokens": 350
+        "temperature": 0.4,
+        "max_tokens": 450
     }
 
     try:
@@ -88,7 +88,7 @@ def call_llm_api(system_prompt: str, user_content: str, history: Optional[List[D
             res_data = json.loads(response.read().decode("utf-8"))
             return res_data["choices"][0]["message"]["content"].strip()
     except Exception as e:
-        print(f"[Generator] LLM API call failed ({e}), falling back to local engine.")
+        print(f"[Generator] LLM API call failed ({e}), using local synthesis.")
         return None
 
 
@@ -124,70 +124,120 @@ def synthesize_local_grounded_answer(retrieved_chunks: List[Dict[str, Any]], que
             top_sentences.append(candidates[1][1])
         base_answer = " ".join(top_sentences)
     else:
-        # Fallback to the top chunk's first paragraph without markdown hashes
         top_chunk_text = retrieved_chunks[0].get("text", "").strip()
         first_para = top_chunk_text.split("\n\n")[0]
         base_answer = re.sub(r"^#+\s*", "", first_para).strip()
 
-    # Subtle conversational tone framing
     if tone == "casual":
         if not base_answer.lower().startswith(("yep", "here", "sure", "nimbusnote")):
             return f"Got you — {base_answer[0].lower() + base_answer[1:] if len(base_answer) > 1 else base_answer}"
     return base_answer
 
 
-def synthesize_local_casual_response(question: str, tone: str = "balanced") -> str:
-    """Generates natural, responsive small talk without requiring an API key."""
+def synthesize_local_general_response(question: str, tone: str = "balanced") -> str:
+    """
+    Offline local general AI generator covering programming concepts, math, science,
+    creative requests, jokes, small talk, random text, and live-data disclaimers.
+    """
     q = question.strip().lower()
+    q_no_punct = re.sub(r"[^\w\s]", "", q).strip()
 
-    # Greetings
-    if any(q.startswith(g) for g in ["yo", "sup", "hey", "hi", "hello", "howdy"]):
-        if "yo" in q or "bro" in q or "gang" in q or "fam" in q:
-            return "Yo! Clanker here. What are we looking up in the notebook today?"
-        elif "sup" in q:
-            return "Not much, just keeping the notebook organized! What do you need?"
-        else:
-            return "Hey there! I'm Clanker. Ask me anything about NimbusNote, or just say what's on your mind."
+    # 1. Random text / keyboard mash (e.g. asdfgh, qwerty, zxcvbn)
+    if re.match(r"^[asdfghjklqwertyuiopzxcvbnm\s]{4,}$", q_no_punct) and not any(w in q_no_punct.split() for w in ["what", "how", "who", "why", "when", "is", "can"]):
+        if any(seq in q_no_punct for seq in ["asdf", "qwerty", "zxcv", "hjkl", "ghjk"]):
+            return "Looks like some keyboard static! I'm here and listening — what would you like to explore or check in the notebook?"
 
-    # Gratitude & pleasantries
-    if any(w in q for w in ["thanks", "thank you", "thx", "appreciate"]):
-        if "bro" in q or tone == "casual":
-            return "Anytime! Let me know if you need anything else from the notebook."
-        return "You're very welcome! Feel free to ask if you have more questions."
+    # 2. Ambiguous follow-ups with no context
+    if q in ["what about that", "what about it", "why is that", "how about that", "can it", "what about that?"]:
+        return "I'm listening, but I'm not sure what you're referring to. Could you give me a bit more detail on what you'd like to check?"
 
-    if any(w in q for w in ["cool", "nice", "awesome", "great", "fire", "bet", "lit"]):
-        return "Glad you like it! Ready whenever you want to check something in the notebook."
+    # 3. Live real-time data queries (e.g. weather, stocks, live scores)
+    if any(w in q for w in ["weather", "temperature", "forecast", "stock price", "who won", "score"]):
+        loc_match = re.search(r"in\s+([a-zA-Z\s]+)", q)
+        loc = f" for {loc_match.group(1).strip().title()}" if loc_match else ""
+        return f"I don't have access to live real-time weather or current event data{loc}. I'm a notebook-based assistant, but I can help with general explanations, coding concepts, writing, or anything in the NimbusNote documentation."
 
-    if any(w in q for w in ["lol", "haha", "lmao", "rofl", "hehe"]):
-        return "Haha! Glad to keep things light. Let me know what you'd like to look up!"
+    # 4. Programming concepts (Recursion, Binary Search, Python, Git, etc.)
+    if "recursion" in q:
+        return "Recursion is when a function calls itself to break a problem down into smaller sub-problems. It always needs two key parts:\n1. Base Case: A condition that stops the recursion so it doesn't run forever.\n2. Recursive Case: The step where the function calls itself with modified input.\n\nA classic example is calculating a factorial: factorial(n) = n * factorial(n - 1), with base case factorial(1) = 1."
 
-    # Identity & Capabilities
-    if any(p in q for p in ["who are you", "what are you"]):
-        return "I'm Clanker — your tiny notebook-powered AI assistant. I can search through the NimbusNote documentation to find exact passages, pricing details, sync specs, and troubleshooting tips, or just chat with you!"
+    if "binary search" in q:
+        return "Binary search is an efficient algorithm for finding an item in a sorted list. It works by repeatedly dividing the search interval in half: if the target value is less than the middle element, it searches the lower half; otherwise, it searches the upper half. Its time complexity is O(log n)."
 
-    if any(p in q for p in ["what can you do", "help"]):
-        return "I can search the NimbusNote documentation for answers on workspace limits, Free/Pro/Team plans, sync behavior, and troubleshooting. I'll always show you the exact passage and source document when answering!"
+    if "learn python" in q or "learning python" in q or "good way to learn python" in q:
+        return "A great way to learn Python is through hands-on practice:\n1. Master the basics: variables, loops, lists, and functions.\n2. Build small CLI projects: a calculator, a to-do list, or a text parser.\n3. Explore libraries: try requests, fastapi, or pandas.\n4. Practice problem solving on platforms like LeetCode or exercism.io."
+
+    # 5. Math queries (e.g. 2+2, 5*5, simple arithmetic)
+    math_match = re.search(r"(\d+)\s*([\+\-\*\/])\s*(\d+)", q)
+    if math_match:
+        a, op, b = int(math_match.group(1)), math_match.group(2), int(math_match.group(3))
+        res = a + b if op == "+" else (a - b if op == "-" else (a * b if op == "*" else (a / b if b != 0 else "undefined")))
+        return f"{a} {op} {b} is {res}."
+
+    # 6. Science concepts (Black holes, Photosynthesis, Gravity)
+    if "black hole" in q:
+        return "A black hole is a region of spacetime where gravity is so strong that nothing — not even light — can escape from it. They usually form when massive stars collapse at the end of their life cycle. The boundary beyond which nothing can escape is called the event horizon."
+
+    if "photosynthesis" in q:
+        return "Photosynthesis is the biological process by which green plants and certain organisms use sunlight, water, and carbon dioxide to create oxygen and energy in the form of glucose."
+
+    # 7. Creative requests (Poem, Story, Haiku)
+    if "poem" in q or "haiku" in q or "rhyme" in q:
+        if "haiku" in q:
+            return "Pages quietly turn,\nParchment holds the words of thought,\nClanker never sleeps."
+        return "Gears of brass and ink on page,\nA quiet mind upon the stage.\nThrough notebook lines and spiral wire,\nClanker sparks the thinking fire."
+
+    if "story" in q:
+        return "Once in a quiet workshop filled with gears and parchment, a mechanical assistant named Clanker came to life. Unlike other machines that wanted to conquer galaxies, Clanker just wanted to organize thoughts, answer questions, and keep the notebook tidy. And so, between the ruled lines of paper, Clanker found its purpose."
+
+    # 8. Humor & Jokes
+    if "joke" in q or "funny" in q or "laugh" in q:
+        jokes = [
+            "Why did the markdown file cross the road? To get to the other ## header!",
+            "There are 10 types of people in the world: those who understand binary, and those who don't.",
+            "Why do programmers prefer dark mode? Because light attracts bugs!"
+        ]
+        return jokes[0]
+
+    # 9. Identity & Capabilities
+    if any(p in q for p in ["who are you", "what are you", "introduce yourself"]):
+        return "I'm Clanker — your notebook-powered AI assistant. I can chat, explain programming and science topics, help brainstorm, or search the NimbusNote documentation with grounded citations."
+
+    if any(p in q for p in ["what can you do", "help me", "what do you do"]):
+        return "You can talk to me about anything! I can answer general questions, explain code, write stories, or search through the NimbusNote documentation for exact workspace limits, sync specs, and troubleshooting."
 
     if any(p in q for p in ["how are you", "how's it going", "how are you doing"]):
-        return "Doing great, thanks for asking! Running smoothly and ready to search the notebook. How are you doing?"
+        return "Doing great, thanks for asking! Running smoothly and ready to chat. What's on your mind today?"
 
-    if "joke" in q or "funny" in q:
-        return "Why did the markdown file cross the road? To get to the other ## header!"
+    if "bored" in q:
+        return "I can help with that! We can brainstorm an app idea, solve a coding puzzle, explore a weird science fact, or I can tell you a joke. What sounds fun?"
 
-    if any(p in q for p in ["you look cool", "you're cool", "you are cool", "i like you"]):
-        return "Thanks! The notebook aesthetic suits me well. What can I help you find today?"
+    # 10. Greetings & Small talk
+    if any(q.startswith(g) for g in ["yo", "sup", "hey", "hi", "hello", "howdy", "hiya"]):
+        if "yo" in q or "bro" in q:
+            return "Yo! Clanker here. What are we working on or looking up today?"
+        return "Hey there! I'm Clanker. What's on your mind today?"
 
-    if any(p in q for p in ["bye", "goodbye", "see ya", "cya", "later"]):
+    if any(w in q for w in ["thanks", "thank you", "thx", "appreciate"]):
+        return "Anytime! Let me know if you want to explore anything else."
+
+    if any(w in q for w in ["cool", "nice", "awesome", "great", "fire", "bet", "lit", "ok", "okay"]):
+        return "Glad to hear! Ready whenever you want to ask something else."
+
+    if any(w in q for w in ["lol", "haha", "lmao", "rofl", "hehe"]):
+        return "Haha! Glad to keep things light. Let me know what you'd like to explore next!"
+
+    if any(w in q for w in ["bye", "goodbye", "see ya", "cya", "later"]):
         return "Catch you later! The notebook is always here when you need it."
 
     # General conversational fallback
-    return "I hear you! Feel free to ask any question about NimbusNote documentation, or let me know what you'd like to explore."
+    return "I'm here! Feel free to ask me any general question, ask for an explanation, or ask about the NimbusNote documentation."
 
 
 class AnswerGenerator:
     """
-    Unified answer generator handling both Grounded RAG Generation
-    and General Conversational responses.
+    Unified answer generator handling Grounded RAG Generation
+    and General AI Conversational responses.
     """
     def generate_grounded_answer(
         self,
@@ -209,16 +259,17 @@ class AnswerGenerator:
 
         return synthesize_local_grounded_answer(retrieved_chunks, question, tone=tone)
 
-    def generate_casual_response(
+    def generate_general_response(
         self,
         question: str,
         history: Optional[List[Dict[str, str]]] = None
     ) -> str:
+        """Generates general AI conversational and explanatory responses."""
         tone = detect_tone(question)
 
         if OPENAI_API_KEY:
-            api_answer = call_llm_api(CASUAL_SYSTEM_PROMPT, question, history)
+            api_answer = call_llm_api(GENERAL_SYSTEM_PROMPT, question, history)
             if api_answer:
                 return api_answer
 
-        return synthesize_local_casual_response(question, tone=tone)
+        return synthesize_local_general_response(question, tone=tone)

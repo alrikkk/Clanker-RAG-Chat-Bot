@@ -187,12 +187,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 <line x1="16" y1="17" x2="8" y2="17"></line>
                 <polyline points="10 9 9 9 8 9"></polyline>
               </svg>
-              <span>RETRIEVED FROM NOTEBOOK</span>
+              <span>FROM THE NOTEBOOK</span>
             </div>
             <div class="retrieval-meta-badges">
               <span class="doc-badge">📎 ${escapeHtml(citations[0].source)}</span>
-              <span class="section-badge">Section: ${escapeHtml(citations[0].section)}</span>
-              <span class="score-badge">Similarity: ${citations[0].similarity.toFixed(2)}</span>
+              <span class="section-badge">${escapeHtml(citations[0].section)}</span>
+              <span class="score-badge">sim: ${citations[0].similarity.toFixed(2)}</span>
             </div>
           </div>
           <div class="passage-quote-container">
@@ -214,7 +214,7 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
       `;
     } 
-    // PATH 2: UNSUPPORTED FACTUAL QUERY (Calm Not-Found Presentation)
+    // PATH 2: UNSUPPORTED NIMBUSNOTE QUERY (Calm Not-In-Notebook Presentation)
     else if (mode === 'unsupported') {
       retrievalBoxHtml = `
         <div class="calm-unsupported-box" role="region" aria-label="Information Not Found">
@@ -224,10 +224,11 @@ document.addEventListener('DOMContentLoaded', () => {
               <line x1="12" y1="8" x2="12" y2="12"></line>
               <line x1="12" y1="16" x2="12.01" y2="16"></line>
             </svg>
-            <span>NOT FOUND IN NOTEBOOK</span>
+            <span>NOT IN THE NOTEBOOK</span>
           </div>
           <p class="calm-unsupported-desc">
-            No matching information was found in the NimbusNote documents (similarity: <strong>${top_similarity ? top_similarity.toFixed(2) : '0.00'}</strong> &lt; threshold: <strong>${threshold ? threshold.toFixed(2) : '0.40'}</strong>).
+            I couldn't find that in the NimbusNote documents.
+            <span class="unsupported-submeta">(Similarity: ${top_similarity ? top_similarity.toFixed(2) : '0.00'} · threshold: ${threshold ? threshold.toFixed(2) : '0.40'})</span>
           </p>
         </div>
       `;

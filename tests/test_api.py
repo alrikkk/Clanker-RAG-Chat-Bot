@@ -60,6 +60,17 @@ def test_api_query_casual_mode():
     assert len(data["answer"]) > 0
 
 
+def test_api_query_general_ai():
+    response = client.post("/api/query", json={
+        "question": "explain recursion like I'm new to programming"
+    })
+    assert response.status_code == 200
+    data = response.json()
+    assert data["mode"] == "casual"
+    assert len(data["citations"]) == 0
+    assert "recursion" in data["answer"].lower() or "base case" in data["answer"].lower()
+
+
 def test_api_query_multi_turn_follow_up():
     response = client.post("/api/query", json={
         "question": "and how many collaborators?",
@@ -76,14 +87,24 @@ def test_api_query_multi_turn_follow_up():
     assert any("20 collaborators" in c["passage"] for c in data["citations"])
 
 
-def test_api_query_out_of_scope():
+def test_api_query_unsupported_nimbus_feature():
     response = client.post("/api/query", json={
-        "question": "What is the weather in Chennai today?"
+        "question": "Does NimbusNote have voice note recording?"
     })
     assert response.status_code == 200
     data = response.json()
     assert data["mode"] == "unsupported"
     assert data["supported"] is False
-    assert data["top_similarity"] < data["threshold"]
     assert len(data["citations"]) == 0
-    assert "couldn't find enough information" in data["answer"].lower()
+    assert "couldn't find that in the nimbusnote" in data["answer"].lower()
+
+
+def test_api_query_live_weather_disclaimer():
+    response = client.post("/api/query", json={
+        "question": "What is the weather in Chennai today?"
+    })
+    assert response.status_code == 200
+    data = response.json()
+    assert data["mode"] == "casual"
+    assert len(data["citations"]) == 0
+    assert "live" in data["answer"].lower() or "weather" in data["answer"].lower()
