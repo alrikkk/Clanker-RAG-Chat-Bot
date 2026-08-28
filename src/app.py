@@ -69,6 +69,7 @@ class QueryResponse(BaseModel):
 
 
 @app.post("/api/query", response_model=QueryResponse)
+@app.post("/query", response_model=QueryResponse)
 async def query_endpoint(request: QueryRequest):
     """
     Submits a query to Clanker, intelligently routing between Casual Conversation
@@ -83,6 +84,7 @@ async def query_endpoint(request: QueryRequest):
 
 
 @app.get("/api/health")
+@app.get("/health")
 async def health_endpoint():
     """Returns application health and indexing metadata."""
     if not pipeline.indexed:
@@ -99,6 +101,7 @@ async def health_endpoint():
 
 
 @app.get("/api/documents")
+@app.get("/documents")
 async def documents_endpoint():
     """Returns the list of indexed documents and their section breakdown."""
     if not pipeline.indexed:
