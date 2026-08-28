@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clanker — Your Tiny Notebook-Powered RAG Assistant</title>
+  <meta name="description" content="A skeuomorphic notebook-powered RAG assistant that retrieves relevant passages from NimbusNote documents before generating grounded answers.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <!-- UI Font: Inter | Handwriting Font: Patrick Hand & Caveat -->
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Inter:wght@400;500;600;700&family=Patrick+Hand&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <!-- Ambient Desk Backdrop -->
+  <div class="desk-background" aria-hidden="true"></div>
+
+  <main class="app-container" id="main-content">
+    
+    <!-- ==================================================== -->
+    <!-- VIEW 1: "LET'S CHAT" STARTING NOTEBOOK PAGE           -->
+    <!-- ==================================================== -->
+    <section class="notebook-cover-view" id="landing-view" aria-labelledby="cover-title">
+      <div class="notebook-book closed-book">
+        
+        <!-- Notebook Spine & Bookmark Ribbon -->
+        <div class="notebook-spine-outer" aria-hidden="true">
+          <div class="spine-ribbon"></div>
+          <div class="spine-stitching"></div>
+        </div>
+
+        <!-- Cover Face -->
+        <div class="cover-card">
+          <!-- Notebook Ring Binder Holes -->
+          <div class="binder-rings" aria-hidden="true">
+            <span class="ring"></span>
+            <span class="ring"></span>
+            <span class="ring"></span>
+            <span class="ring"></span>
+            <span class="ring"></span>
+            <span class="ring"></span>
+          </div>
+
+          <div class="cover-content">
+            <!-- Embossed Notebook Label Plate with Robot Mascot -->
+            <div class="notebook-label-plate">
+              <div class="app-badge">
+                <svg class="robot-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <rect x="3" y="11" width="18" height="10" rx="2"></rect>
+                  <circle cx="12" cy="5" r="2"></circle>
+                  <path d="M12 7v4"></path>
+                  <line x1="8" y1="16" x2="8.01" y2="16"></line>
+                  <line x1="16" y1="16" x2="16.01" y2="16"></line>
+                </svg>
+                <span>RAG ASSISTANT</span>
+              </div>
+              
+              <h1 id="cover-title" class="brand-title">CLANKER</h1>
+              
+              <!-- Clanker Robot Mascot Artwork -->
+              <div class="mascot-container" aria-hidden="true">
+                <img src="/assets/clanker-mascot.svg" alt="Clanker Robot Mascot" class="mascot-img" width="130" height="130">
+              </div>
+
+              <p class="brand-tagline">Your tiny notebook-powered RAG assistant.</p>
+            </div>
+
+            <!-- Paper Inset Note -->
+            <div class="cover-paper-note">
+              <h2 class="welcome-heading">Let's Chat</h2>
+              <p class="welcome-text">
+                Ask a question and I'll search the notebook for the most relevant passages before answering.
+              </p>
+              <div class="grounding-disclaimer">
+                <svg class="shield-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                </svg>
+                <span>Answers are grounded in the provided <strong>NimbusNote</strong> documents.</span>
+              </div>
+            </div>
+
+            <!-- Primary Action -->
+            <div class="cover-actions">
+              <button type="button" id="btn-enter-chat" class="btn btn-primary btn-tactile">
+                <span>Let's Chat</span>
+                <svg class="btn-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                  <polyline points="12 5 19 12 12 19"></polyline>
+                </svg>
+              </button>
+            </div>
+
+            <!-- Document Index Indicator -->
+            <footer class="cover-footer">
+              <span class="footer-meta" id="doc-status-indicator">Indexed: 3 NimbusNote Documents</span>
+            </footer>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================================================== -->
+    <!-- VIEW 2: MAIN OPEN NOTEBOOK CHAT INTERFACE            -->
+    <!-- ==================================================== -->
+    <section class="notebook-chat-view hidden" id="chat-view" aria-label="Clanker Notebook Chat">
+      <div class="notebook-spread">
+        
+        <!-- Spiral / Ring Binding -->
+        <div class="notebook-binding-spine" aria-hidden="true">
+          <div class="spiral-holes">
+            <div class="hole-pair"><span class="hole"></span><span class="wire"></span><span class="hole"></span></div>
+            <div class="hole-pair"><span class="hole"></span><span class="wire"></span><span class="hole"></span></div>
+            <div class="hole-pair"><span class="hole"></span><span class="wire"></span><span class="hole"></span></div>
+            <div class="hole-pair"><span class="hole"></span><span class="wire"></span><span class="hole"></span></div>
+            <div class="hole-pair"><span class="hole"></span><span class="wire"></span><span class="hole"></span></div>
+            <div class="hole-pair"><span class="hole"></span><span class="wire"></span><span class="hole"></span></div>
+            <div class="hole-pair"><span class="hole"></span><span class="wire"></span><span class="hole"></span></div>
+            <div class="hole-pair"><span class="hole"></span><span class="wire"></span><span class="hole"></span></div>
+          </div>
+        </div>
+
+        <!-- Open Ruled Notebook Page -->
+        <div class="notebook-page-paper">
+          
+          <!-- Page Header Strip -->
+          <header class="notebook-header">
+            <div class="header-branding">
+              <button type="button" id="btn-back-cover" class="btn-icon" title="Return to Notebook Cover" aria-label="Return to Notebook Cover">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+              </button>
+              <div class="header-mascot-badge">
+                <img src="/assets/clanker-mascot.svg" alt="Clanker" class="header-mascot-img" width="28" height="28">
+              </div>
+              <div class="header-titles">
+                <span class="app-title-nav">CLANKER</span>
+                <span class="notebook-subtitle">Your notebook-powered RAG assistant</span>
+              </div>
+            </div>
+
+            <div class="header-badges">
+              <span class="status-badge" id="model-badge" title="Local sentence-transformers embedding model">
+                <span class="status-dot"></span> all-MiniLM-L6-v2
+              </span>
+              <button type="button" id="btn-clear-chat" class="btn btn-secondary btn-sm" title="Clear notebook entries" aria-label="Clear chat history">
+                Clear Page
+              </button>
+            </div>
+          </header>
+
+          <!-- Ruled Margin Line -->
+          <div class="paper-margin-line" aria-hidden="true"></div>
+
+          <!-- Chat Conversation Scroll Area -->
+          <div class="notebook-scroll-area" id="chat-messages" role="log" aria-live="polite" aria-relevant="additions text">
+            
+            <!-- Welcome Note from Clanker -->
+            <article class="chat-message assistant-message welcome-note" id="welcome-message">
+              <div class="speaker-tag">
+                <img src="/assets/clanker-mascot.svg" alt="" class="speaker-avatar-img" width="16" height="16" aria-hidden="true">
+                <span>CLANKER</span>
+              </div>
+              <div class="message-body handwriting-text">
+                <p>Hey! What would you like to know from the NimbusNote documentation?</p>
+                <p>Try asking an in-scope question about sync frequency, workspace plans, or troubleshooting — or try an out-of-scope question to see my relevance threshold in action!</p>
+              </div>
+
+              <!-- Suggested In-Scope & Out-of-Scope Prompts -->
+              <div class="prompt-chips-wrapper" aria-label="Sample test queries">
+                <span class="chips-label">Quick Test Prompts:</span>
+                <div class="chips-list">
+                  <button type="button" class="prompt-chip in-scope" data-prompt="How often does NimbusNote sync while the app is in the foreground?">
+                    <span class="chip-tag">In-Scope</span> "How often does NimbusNote sync while the app is in the foreground?"
+                  </button>
+                  <button type="button" class="prompt-chip in-scope" data-prompt="What features are included in the Pro plan and how much does it cost?">
+                    <span class="chip-tag">In-Scope</span> "What features are included in the Pro plan and how much does it cost?"
+                  </button>
+                  <button type="button" class="prompt-chip in-scope" data-prompt="Why can't I upload an image to my note?">
+                    <span class="chip-tag">In-Scope</span> "Why can't I upload an image to my note?"
+                  </button>
+                  <button type="button" class="prompt-chip out-of-scope" data-prompt="What is the weather in Chennai today?">
+                    <span class="chip-tag alert-tag">Out-of-Scope Test</span> "What is the weather in Chennai today?"
+                  </button>
+                </div>
+              </div>
+            </article>
+
+            <!-- Dynamic Messages will be injected here -->
+          </div>
+
+          <!-- Searching / Loading Indicator -->
+          <div class="searching-indicator hidden" id="loading-indicator" aria-live="assertive" role="status">
+            <div class="mascot-loading-icon" aria-hidden="true">
+              <img src="/assets/clanker-mascot.svg" alt="" class="loading-mascot-img" width="24" height="24">
+            </div>
+            <div class="loading-text-group">
+              <span class="loading-main">Clanker is searching the notebook...</span>
+              <span class="loading-sub">Calculating cosine similarity across indexed passages</span>
+            </div>
+          </div>
+
+          <!-- Fixed Notepad Input Bar -->
+          <footer class="notebook-input-section">
+            <form id="chat-form" class="notepad-input-card" novalidate>
+              <div class="input-header-strip" aria-hidden="true">
+                <span class="notepad-line-guide">Write Question Below</span>
+              </div>
+              <div class="input-row">
+                <label for="question-input" class="sr-only">Write your question here</label>
+                <textarea
+                  id="question-input"
+                  name="question"
+                  class="notepad-textarea"
+                  placeholder="Write your question here..."
+                  rows="2"
+                  required
+                  aria-required="true"
+                ></textarea>
+                
+                <button type="submit" id="btn-submit-question" class="btn btn-ask btn-tactile" aria-label="Ask Clanker">
+                  <span>Ask</span>
+                  <svg class="ask-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <line x1="22" y1="2" x2="11" y2="13"></line>
+                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                  </svg>
+                </button>
+              </div>
+              <div class="input-footer-hints">
+                <span class="shortcut-hint">Press <strong>Enter</strong> to ask, <strong>Shift + Enter</strong> for a new line</span>
+                <span class="grounding-note">Grounded in 01-getting-started, 02-pricing-and-plans, 03-troubleshooting</span>
+              </div>
+            </form>
+          </footer>
+
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="/js/app.js"></script>
+</body>
+</html>
