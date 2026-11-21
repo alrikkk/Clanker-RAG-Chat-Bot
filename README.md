@@ -135,5 +135,6 @@ Vercel will use `vercel.json` and `api/index.py` to serve the FastAPI backend al
 
 
 ## note
-The Bot's Ai has been disabled dude to trial API use, you may check it out and try to run your own one locally.|
+The Bot's Ai has been disabled dude to trial API use, you may check it out and try to run your own one locally.
+
 Thanks for checking this project out.
