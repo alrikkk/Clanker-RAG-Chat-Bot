@@ -1,3 +1,5 @@
+<img width="217" height="223" alt="Screenshot 2026-11-21 at 3 54 03 PM" src="https://github.com/user-attachments/assets/a3f2843e-8d8a-4d08-a443-c0dc8cb8b111" />
+
 # Clanker
 
 A notebook-powered AI assistant and RAG chatbot built around the NimbusNote documentation.
@@ -121,3 +123,17 @@ The test suite covers:
 4. Deploy.
 
 Vercel will use `vercel.json` and `api/index.py` to serve the FastAPI backend along with the static frontend files.
+
+
+## Preview 
+
+<img width="1511" height="831" alt="Screenshot 2026-11-21 at 3 54 45 PM" src="https://github.com/user-attachments/assets/d7475228-57b5-40d0-876e-208a1c4202bf" />
+
+<img width="1512" height="831" alt="Screenshot 2026-11-21 at 3 55 45 PM" src="https://github.com/user-attachments/assets/2767ba25-8cf6-4dd1-a8f3-717ac08e59e5" />
+
+<img width="1203" height="768" alt="Screenshot 2026-11-21 at 3 56 33 PM" src="https://github.com/user-attachments/assets/743193a7-4182-424e-8ddd-ad9aa8b0099a" />
+
+
+## note
+The Bot's Ai has been disabled dude to trial API use, you may check it out and try to run your own one locally.|
+Thanks for checking this project out.
